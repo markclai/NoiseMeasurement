@@ -11,7 +11,7 @@ classdef ImpGen
         function obj = ImpGen(comNumber)
             %IMPGEN Construct an instance of this class
             %   Detailed explanation goes here
-            obj.serialObject = serialport(sprintf("COM%d", comNumber), 'BaudRate', baudRate);
+            obj.serialObject = serial(sprintf("COM%d", comNumber), 'BaudRate', obj.baudRate);
         end
         
         function openSerial(obj)
@@ -32,7 +32,7 @@ classdef ImpGen
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
             try
-                openSerial();
+                obj.openSerial();
                 switch setState
                     case 1
                         fprintf(obj.serialObject, 'setStateA');
@@ -43,7 +43,7 @@ classdef ImpGen
                     case 4
                         fprintf(obj.serialObject, 'setStateD');
                     otherwise
-                        disp("Invalid state requested\n");
+                        disp("Invalid state requested");
                 end
                 fclose(obj.serialObject);
             catch
