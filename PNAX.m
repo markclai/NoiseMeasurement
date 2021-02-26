@@ -7,9 +7,9 @@ classdef PNAX < GPIBObj
     end
     
     methods
-        function obj = PNAX(gpibAddr, gpibBoard)
+        function obj = PNAX(visaAddr)
             
-            obj = obj@GPIBObj(gpibAddr, gpibBoard);
+            obj = obj@GPIBObj(visaAddr);
             %Reset PNA-X
             disp("Resetting PNA-X");
             obj.sendCommand('SYST:FPR', 1);
@@ -41,14 +41,14 @@ classdef PNAX < GPIBObj
             temp(9) = sprintf('SENS1:AVER:MODE SWEEP');
             temp(10) = sprintf('SENS1:AVER:STAT 1'); 
 
-                %Change channel one frequency range
+            %Change channel two frequency range
             temp(11) = sprintf('SENS2:FREQ:STAR %f', obj.fStart); 
             temp(12) = sprintf('SENS2:FREQ:STOP %f', obj.fStop); 
             temp(13) = sprintf('SENS2:SWE:POIN %d', obj.nPoints); 
 
             temp(14) = sprintf('SENS2:NOIS:BWID 800e3'); 
             temp(15) = sprintf('SENS2:NOIS:GAIN 30'); 
-            temp(16) = sprintf('SENS2:NOIS:AVER', obj.nAvg);
+            temp(16) = sprintf('SENS2:NOIS:AVER %d', obj.nAvg);
             
             % Set up s parameter settings
             temp(17) = sprintf('SENS2:AVER:COUN %d', obj.nAvg); 
