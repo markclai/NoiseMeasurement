@@ -43,7 +43,7 @@ classdef ImpGen
                     case 4
                         fprintf(obj.serialObject, 'setStateD');
                     otherwise
-                        disp("Invalid state requested");
+                        warning("Invalid state requested");
                 end
                 fclose(obj.serialObject);
             catch
