@@ -16,34 +16,34 @@ classdef GPIBObj
             %GPIBOBJ Construct an instance of this class
             %   Detailed explanation goes here
             obj.gpibAddr = gpibAddr;
-            obj.gpibBoard = gpibBoard;
-            try
-                obj.gpibObj = gpib(obj.interface, obj.gpibBoard, obj.gpibAddr);
-                obj.gpibObj.timeout = obj.timeout;
+            if nargin == 2
+                obj.gpibBoard = gpibBoard;
+                try
+                    obj.gpibObj = gpib(obj.interface, obj.gpibBoard, obj.gpibAddr);
+                    obj.gpibObj.timeout = obj.timeout;
+                    obj.gpibObj.InputBufferSize = obj.bufferSize;
+                    fopen(obj.gpibObj);
+                    fprintf("Connected to %s\n",(query(obj.gpibObj, "*IDN?")));
+                    fclose(obj.gpibObj);
+                catch
+                    fclose(obj.gpibObj);
+                    error("Couldn't initialize GPIB connection at GPIB Address %d\n", obj.gpibAddr);
+                end
+            else
+                obj.gpibBoard = -1;
+                obj.gpibObj = visa(interface, visaAddr);
                 obj.gpibObj.InputBufferSize = obj.bufferSize;
-                fopen(obj.gpibObj);
-                fprintf("Connected to %s\n",(query(obj.gpibObj, "*IDN?")));
-                fclose(obj.gpibObj);
-            catch
-                fclose(obj.gpibObj);
-                error("Couldn't initialize GPIB connection at GPIB Address %d\n", obj.gpibAddr);
+                obj.gpibObj.ByteOrder = 'littleEndian';
+                try
+                    fopen(obj.gpibObj);
+                    clrdevice(obj.gpibObj);
+                    fprintf("Connected to %s\n", query(obj.gpibObj, '*IDN?'));
+                catch
+                    error("Couldn't initialize VISA connection to %s\n", obj.gpibAddr);
+                end
             end
         end
         
-        function obj = GPIBObj(visaAddr)
-            obj.gpibBoard = -1;
-            obj.gpibAddr = visaAddr;
-            obj.gpibObj = visa(interface, visaAddr);
-            obj.gpibObj.InputBufferSize = obj.bufferSize;
-            obj.gpibObj.ByteOrder = 'littleEndian';
-            try
-                fopen(obj.gpibObj);
-                clrdevice(obj.gpibObj);
-                fprintf("Connected to %s\n", query(obj.gpibObj, '*IDN?'));
-            catch
-                error("Couldn't initialize connection to %s\n", obj.gpibAddr);
-            end
-        end
         
         function checkStatusAndConnect(obj)
             if strcmp(obj.gpibObj.status, 'closed')
