@@ -13,8 +13,8 @@ classdef GPIBObj
     
     methods
         function obj = GPIBObj(gpibAddr, gpibBoard)
-            %GPIBOBJ Construct an instance of this class
-            %   Detailed explanation goes here
+            %GPIBOBJ Creates a VISA or GPIB object depending on the number
+            %of arguments. Also opens and requests the identifier.
             obj.gpibAddr = gpibAddr;
             if nargin == 2
                 obj.gpibBoard = gpibBoard;
