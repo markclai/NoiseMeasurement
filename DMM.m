@@ -3,7 +3,7 @@ classdef DMM < GPIBObj
     %   Detailed explanation goes here
     
     properties
-        avgPowerCycle = 0.02
+        avgPowerCycle
     end
     methods
         function obj = DMM(gpibAddr,gpibBoard)
@@ -17,7 +17,8 @@ classdef DMM < GPIBObj
             obj.sendCommand(resetArray, length(resetArray));
         end
         
-        function setup(obj)
+        function setupTempKelvin(obj, avgPowerCycle)
+            obj.avgPowerCycle = avgPowerCycle;
             setupSequence(1) = "CONF:TEMP THER,5000";
             setupSequence(2) = "UNIT:TEMP K";
             setupSequence(3) = sprintf("TEMP:NPLC %d", obj.avgPowerCycle);
@@ -26,7 +27,7 @@ classdef DMM < GPIBObj
         function tempKelvin = readTempKelvin(obj)
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
-            tempKelvin = obj.sendQuery("READ?"); 
+            tempKelvin = str2double(obj.sendQuery("READ?"));
         end
     end
 end

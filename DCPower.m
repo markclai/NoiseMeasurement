@@ -1,6 +1,6 @@
 classdef DCPower < GPIBObj
-    %DCPOWER Summary of this class goes here
-    %   Detailed explanation goes here
+    %DCPOWER Controls Agilent 6626A Power Supply
+    %   Also includes code to control RF switches
     
     properties
         switchChannel1
@@ -10,7 +10,8 @@ classdef DCPower < GPIBObj
     methods
         function obj = DCPower(gpibAddr,gpibBoard)
             %DCPOWER Construct an instance of this class
-            %   Detailed explanation goes here
+            %   Pass in GPIB Address and GPIB Board address, also resets
+            %   the DC Supply and disables outputs.
             obj = obj@GPIBObj(gpibAddr, gpibBoard);
             %Reset DMM
             disp("Resetting PSU");
@@ -25,8 +26,8 @@ classdef DCPower < GPIBObj
         end
         
         function  setVoltage(obj, channel, voltage)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
+            %setVoltage Summary of this method goes here
+            %   Sets voltage of a particular channel. 
             if(channel < 0 || channel > 4)
                 warning("Invalid channel requested");
                 return;

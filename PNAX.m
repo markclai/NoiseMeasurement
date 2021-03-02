@@ -4,6 +4,8 @@ classdef PNAX < GPIBObj
         fStop
         nPoints
         nAvg
+        storedS2PFiles
+        storedCSVFiles
     end
     
     methods
@@ -79,6 +81,7 @@ classdef PNAX < GPIBObj
 
             temp = obj.sendQuery('DISP:WIND2:TRAC2:SEL;*OPC?');
             temp = obj.sendQuery('MMEM:STOR:DATA "%s","CSV Formatted Data","Channel","Displayed",5;*OPC?', noiseFilename); 
+            obj.storedS2PFiles{end+1} = s2pFilename;
         end
         
         function saveNoisePower(obj, noiseFilename)
@@ -90,7 +93,27 @@ classdef PNAX < GPIBObj
             end
             temp = obj.sendQuery('DISP:WIND2:TRAC2:SEL;*OPC?');
             temp = obj.sendQuery('MMEM:STOR:DATA "%s","CSV Formatted Data","Channel","Displayed",5;*OPC?', noiseFilename); 
+            obj.storedCSVFiles{end+1} = noiseFilename;
         end
+        
+        function transferData(obj, prefix, pcFilepath)
+            %Copy S2P Files
+            for s2pCounter = 1:length(obj.storedS2PFiles)
+                temp = strcat(prefix, obj.storedS2PFiles{s2pCounter}); temp = strcat('MMEM:TRAN? "',temp,'"');
+                data = obj.sendQuery(temp);
+                temp = strcat(pcFilepath, obj.storedS2PFiles{s2pCounter});
+                writematrix(temp,data,'');
+            end
+            
+            for csvCounter = 1:length(obj.storedCSVFiles)
+                temp = strcat(prefix, obj.storedS2PFiles{csvCounter}); temp = strcat('MMEM:TRAN? "',temp,'"');
+                data = query(PNAX,temp);
+                temp = strcat(pcFilepath, obj.storedS2PFiles{csvCounter});
+                writematrix(temp,data,'');
+            end
+        end
+        
+            
     end
 end
             
