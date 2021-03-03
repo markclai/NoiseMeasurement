@@ -31,7 +31,7 @@ classdef GPIBObj
                 end
             else
                 obj.gpibBoard = -1;
-                obj.gpibObj = visa(interface, visaAddr);
+                obj.gpibObj = visa(obj.interface, obj.gpibAddr);
                 obj.gpibObj.InputBufferSize = obj.bufferSize;
                 obj.gpibObj.ByteOrder = 'littleEndian';
                 try
@@ -73,15 +73,16 @@ classdef GPIBObj
             %   Detailed explanation goes here
             obj.checkStatusAndConnect();
             for comCounter=1:size
-                try
+                %try
                     fprintf(obj.gpibObj,comArray(comCounter));
-                catch
-                    fclose(obj.gpibObj);
-                    error("Failed sending command %s\n", comArray(comCounter)); 
-                end
+                    disp(comArray(comCounter));
+%                 catch
+%                     fclose(obj.gpibObj);
+%                     error("Failed sending command %s\n", comArray{comCounter}); 
+%                 end
             end
             
-            obj.checkStatusAndDisconnect();
+            %obj.checkStatusAndDisconnect();
         end
         
         function returnVal = sendQuery(obj, queryCmd)
@@ -93,9 +94,10 @@ classdef GPIBObj
                 error("Failed to send query %s\n", queryCmd); 
             end
             
-            obj.checkStatusAndDisconnect();
+            %obj.checkStatusAndDisconnect();
         end
-         
+        
+
     end
 end
 

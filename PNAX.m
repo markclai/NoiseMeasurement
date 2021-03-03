@@ -6,6 +6,7 @@ classdef PNAX < GPIBObj
         nAvg
         storedS2PFiles
         storedCSVFiles
+        noiseGain
     end
     
     methods
@@ -14,49 +15,82 @@ classdef PNAX < GPIBObj
             obj = obj@GPIBObj(visaAddr);
             %Reset PNA-X
             disp("Resetting PNA-X");
-            obj.sendCommand('SYST:FPR', 1);
+            obj.sendCommand("SYST:FPR", 1);
         end
         
-        function setup(fstart, fstop, numpoints, numavg, calFile)
+        function setup(obj, fstart, fstop, numpoints, numavg, calFile, noiseGain)
             obj.fStart = fstart;
             obj.fStop = fstop;
             obj.nPoints = numpoints;
             obj.nAvg = numavg;
             disp("Setting up PNA-X");
             % Set format of S2P file
-            temp(1) = sprintf('MMEM:STOR:TRAC:FORM:SNP MA'); 
+            tempArrayCounter = 1;
+            temp(tempArrayCounter) = "MMEM:STOR:TRAC:FORM:SNP MA"; 
+            tempArrayCounter = tempArrayCounter + 1;
 
-                %Load Calibration file
-            temp(2) = sprintf('MMEM:LOAD:CSAR "%s"', calFile); 
-
+            %Load Calibration file
+            temp(tempArrayCounter) = convertCharsToStrings(sprintf('MMEM:LOAD:CSAR "%s"', calFile));
+            tempArrayCounter = tempArrayCounter + 1;
             %Set trigger to manual
-            temp(3) = sprintf('TRIG:SOUR MAN'); 
-            temp(4) = sprintf('TRIG:SCOP ALL'); 
+            temp(tempArrayCounter) = sprintf("TRIG:SOUR MAN");
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = sprintf("TRIG:SCOP ALL"); 
+            tempArrayCounter = tempArrayCounter + 1;
 
             %Change channel one frequency range
-            temp(5) = sprintf('SENS1:FREQ:STAR %f', obj.fStart); 
-            temp(6) = sprintf('SENS1:FREQ:STOP %f', obj.fStop); 
-            temp(7) = sprintf('SENS1:SWE:POIN %d', obj.nPoints); 
-
+            temp(tempArrayCounter)  = sprintf("SENS1:FREQ:STAR %f", obj.fStart); 
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = sprintf("SENS1:FREQ:STOP %f", obj.fStop);
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = sprintf("SENS1:SWE:POIN %d", obj.nPoints); 
+            tempArrayCounter = tempArrayCounter + 1;
             % Set up s parameter settings
-            temp(8) = sprintf('SENS1:AVER:COUN %d', obj.nAvg); 
-            temp(9) = sprintf('SENS1:AVER:MODE SWEEP');
-            temp(10) = sprintf('SENS1:AVER:STAT 1'); 
+            temp(tempArrayCounter)  = sprintf("SENS1:AVER:COUN %d", obj.nAvg);
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = sprintf("SENS1:AVER:MODE SWEEP");
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = sprintf("SENS1:AVER:STAT 1"); 
+            tempArrayCounter = tempArrayCounter + 1;
 
             %Change channel two frequency range
-            temp(11) = sprintf('SENS2:FREQ:STAR %f', obj.fStart); 
-            temp(12) = sprintf('SENS2:FREQ:STOP %f', obj.fStop); 
-            temp(13) = sprintf('SENS2:SWE:POIN %d', obj.nPoints); 
+            
+            temp(tempArrayCounter) = convertCharsToStrings('CALC2:CUST:DEF "sysnpd", "Noise Figure Cold Source", "SYSNPD"');
+            tempArrayCounter = tempArrayCounter + 1;      
+            temp(tempArrayCounter)  = sprintf("SENS2:FREQ:STAR %f", obj.fStart); 
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = sprintf("SENS2:FREQ:STOP %f", obj.fStop); 
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = sprintf("SENS2:SWE:POIN %d", obj.nPoints); 
+            tempArrayCounter = tempArrayCounter + 1;
 
-            temp(14) = sprintf('SENS2:NOIS:BWID 800e3'); 
-            temp(15) = sprintf('SENS2:NOIS:GAIN 30'); 
-            temp(16) = sprintf('SENS2:NOIS:AVER %d', obj.nAvg);
+            temp(tempArrayCounter) = sprintf("SENS2:NOIS:BWID 800e3"); 
+            tempArrayCounter = tempArrayCounter + 1;
+
+            temp(tempArrayCounter) = sprintf("SENS2:NOIS:AVER %d", obj.nAvg);
+            tempArrayCounter = tempArrayCounter + 1;
             
             % Set up s parameter settings
-            temp(17) = sprintf('SENS2:AVER:COUN %d', obj.nAvg); 
-            temp(18) = sprintf('SENS2:AVER:MODE SWEEP'); 
-            temp(19) = sprintf('SENS2:AVER:STAT 1'); 
-            
+            temp(tempArrayCounter) = sprintf("SENS2:AVER:COUN %d", obj.nAvg); 
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter) = sprintf("SENS2:AVER:MODE SWEEP"); 
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter) = sprintf("SENS2:AVER:STAT 1"); 
+            tempArrayCounter = tempArrayCounter + 1;
+            % set up noise receiver gain
+            switch noiseGain
+                case "LOW"
+                    temp(tempArrayCounter) = sprintf("SENS2:NOIS:GAIN 0"); 
+                    obj.noiseGain = 0;
+                case "MED"
+                    temp(tempArrayCounter) = sprintf("SENS2:NOIS:GAIN 15"); 
+                    obj.noiseGain = 15;
+                case "HIGH"
+                    temp(tempArrayCounter) = sprintf("SENS2:NOIS:GAIN 30"); 
+                    obj.noiseGain = 30;
+                otherwise 
+                    warning("Invalid noise gain requested");
+            end
             obj.sendCommand(temp, length(temp));
         end
             
