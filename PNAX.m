@@ -37,6 +37,46 @@ classdef PNAX < GPIBObj
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter)  = sprintf("TRIG:SCOP ALL"); 
             tempArrayCounter = tempArrayCounter + 1;
+            
+            % Delete existing channel traces
+            temp(tempArrayCounter)  = sprintf("CALC:PAR:DEL:ALL"); 
+            tempArrayCounter = tempArrayCounter + 1;
+            
+            
+            %Setup channel 1 for S parameters
+            temp(tempArrayCounter)  = convertCharsToStrings('CALC1:PAR:DEF:EXT "SParamMeasS11", S11');
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = convertCharsToStrings('CALC1:PAR:DEF:EXT "SParamMeasS12", S12');
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = convertCharsToStrings('CALC1:PAR:DEF:EXT "SParamMeasS21", S21');
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = convertCharsToStrings('CALC1:PAR:DEF:EXT "SParamMeasS22", S22');
+            tempArrayCounter = tempArrayCounter + 1;
+            
+            %Associate measurements to window 1
+            temp(tempArrayCounter)  = "DISP:WIND1:STATE ON";
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = convertCharsToStrings('DISPlay:WINDow1:TRACe1:FEED "SParamMeasS11"');
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = convertCharsToStrings('DISPlay:WINDow1:TRACe2:FEED "SParamMeasS12"');
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = convertCharsToStrings('DISPlay:WINDow1:TRACe3:FEED "SParamMeasS21"');
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = convertCharsToStrings('DISPlay:WINDow1:TRACe4:FEED "SParamMeasS22"');
+            tempArrayCounter = tempArrayCounter + 1;
+            % Setup window for S parameters
+            temp(tempArrayCounter)  = "DISPlay:WINDow1:TITLe:STATe ON";
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = "DISPlay:ANNotation:FREQuency ON";
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = "DISPlay:WINDow1:TRACe1:STATe ON";
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = "DISPlay:WINDow1:TRACe2:STATe ON";
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = "DISPlay:WINDow1:TRACe3:STATe ON";
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = "DISPlay:WINDow1:TRACe4:STATe ON";
+            tempArrayCounter = tempArrayCounter + 1;
 
             %Change channel one frequency range
             temp(tempArrayCounter)  = sprintf("SENS1:FREQ:STAR %f", obj.fStart); 
@@ -97,29 +137,47 @@ classdef PNAX < GPIBObj
         function saveS2P(obj, s2pFilename)    
             % reset averaging
             
-            obj.sendCommand('SENS1:AVER:CLE', 1);
+            obj.sendCommand("SENS1:AVER:CLE", 1);
             
+            % Autoscale display
+            obj.sendCommand("DISP:WIND1:Y:AUTO", 1);
             % Start the measurement and wait until it is complete
-            for i=1:obj.nAvg
-                status = obj.sendQuery('INIT:IMM;*OPC?'); 
-                status = obj.sendQuery('DISP:WIND1:Y:AUTO;*OPC?'); 
-       
-                pause(1);
+            obj.sendCommand(":SENS1:SWE:MODE SINGLE", 1);
+            
+            % Wait until operation is complete
+            opcStatus = 0;
+            while(~opcStatus)
+                opcStatus = str2double(obj.sendQuery("*OPC?"));
             end
             
-            % Save S2P file with noise parameters
-            %temp = sprintf('CALC1:DATA:SNP:PORTs:Save "3,4","%s";*OPC?', filename); status = query(NetworkAnalyzer,temp);
+            [data, numPoints] = obj.saveData("SNP");
+            freqRange = data(:,1);
+            
+            % Convert retrieved magnitude info from dB
+            sparamMag = 10.^((1/20).*data(:,2:2:8));
 
-            temp = obj.sendQuery('DISP:WIND1:TRAC2:SEL;*OPC?'); 
-            temp = obj.sendQuery('MMEM:STOR "%s";*OPC?', s2pFilename); 
+            % Convert retrieved phase info from degrees to radians
+            sparamPhase = data(:,3:2:9)*(pi/180);
+            
+            
+            % Extract S-Parameter vectors
+            rawDataRI = sparamMag.*(cos(sparamPhase)+1i*sin(sparamPhase));
+            S11 = reshape(rawDataRI(:,1),1,1,numPoints);
+            S12 = reshape(rawDataRI(:,3),1,1,numPoints);
+            S21 = reshape(rawDataRI(:,2),1,1,numPoints);
+            S22 = reshape(rawDataRI(:,4),1,1,numPoints);
 
-            temp = obj.sendQuery('DISP:WIND2:TRAC2:SEL;*OPC?');
-            temp = obj.sendQuery('MMEM:STOR:DATA "%s","CSV Formatted Data","Channel","Displayed",5;*OPC?', noiseFilename); 
-            obj.storedS2PFiles{end+1} = s2pFilename;
+            % Assemble into a 3D matrix to be consumed by the RF Toolbox
+            SParameter3Ddata = [S11 S12; S21 S22]; 
+            
+            rfwrite(SParameter3Ddata, freqRange, s2pFilename);
+            
+            
         end
         
+        
         function saveNoisePower(obj, noiseFilename)
-            obj.sendCommand('SENS2:AVER:CLE', 1);
+            obj.sendCommand("SENS2:AVER:CLE", 1);
             for avgCount = 1:obj.nAvg
                 status = obj.sendQuery('INIT:IMM;*OPC?'); 
                 status = obj.sendQuery('DISP:WIND2:Y:AUTO;*OPC?');
@@ -130,23 +188,34 @@ classdef PNAX < GPIBObj
             obj.storedCSVFiles{end+1} = noiseFilename;
         end
         
-        function transferData(obj, prefix, pcFilepath)
-            %Copy S2P Files
-            for s2pCounter = 1:length(obj.storedS2PFiles)
-                temp = strcat(prefix, obj.storedS2PFiles{s2pCounter}); temp = strcat('MMEM:TRAN? "',temp,'"');
-                data = obj.sendQuery(temp);
-                temp = strcat(pcFilepath, obj.storedS2PFiles{s2pCounter});
-                writematrix(temp,data,'');
-            end
+        function [data, numPoints] = saveData(obj, type)
+            %Set format to transfer data
+            obj.sendCommand("FORM REAL,64", 1);
             
-            for csvCounter = 1:length(obj.storedCSVFiles)
-                temp = strcat(prefix, obj.storedS2PFiles{csvCounter}); temp = strcat('MMEM:TRAN? "',temp,'"');
-                data = query(PNAX,temp);
-                temp = strcat(pcFilepath, obj.storedS2PFiles{csvCounter});
-                writematrix(temp,data,'');
+            %Set byte order
+            
+            obj.sendCommand("FORM:BORD SWAP", 1);
+            
+            switch type
+                case "SNP" 
+                    % Request measurement data
+                    obj.sendCommand(convertCharsToStrings('CALC1:DATA:SNP:PORT? "1,2"'), 1);
+                    data = binblockread(obj.gpibObj, 'double');
+                    fread(obj.gpibObj, 1);
+                    %Reshape measurement data to array
+                    numPoints = str2double(obj.sendQuery("SENS1:SWE:POIN?"));
+                    data = reshape(data, numPoints, 9);
+                case "Noise"
+                    % Request measurement data
+                    obj.sendCommand(convertCharsToStrings('CALC2:DATA:CUST? "sysnpd"'), 1);
+                    data = binblockread(obj.gpibObj, 'double');
+                    numPoints = str2double(obj.sendQuery("SENS2:SWE:POIN?"));
+                    data = reshape(data, numPoints, 2);
+                otherwise
+                    warning("Invalid measurement requested");
+            
             end
         end
-        
             
     end
 end

@@ -97,7 +97,15 @@ classdef GPIBObj
             %obj.checkStatusAndDisconnect();
         end
         
-
+        function isError = checkErrors(obj)
+            systemError = '';
+            isError = false;
+            while (~contains(lower(systemError),'no error'))
+                systemError = obj.sendQuery("SYST:ERR?");
+                fprintf("System error(s): %s", systemError);
+                isError = true;
+            end
+        end
     end
 end
 

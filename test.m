@@ -24,6 +24,7 @@ clear all;
 %% Test PNA-X
 pnax = PNAX("USB0::0x0957::0x0118::MY48420967::0::INSTR");
 pnax.setup(100e6,2e9,201,10, "C:\Mark_Cal\Feb26_2021.csa", "HIGH");
+pnax.saveS2P("test1.s2p");
 pnax.checkStatusAndDisconnect();
 %% Test DC Supply
 % dcSupply = DCPower(1,7);
