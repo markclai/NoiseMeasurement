@@ -32,6 +32,7 @@ classdef GPIBObj
             else
                 obj.gpibBoard = -1;
                 obj.gpibObj = visa(obj.interface, obj.gpibAddr);
+                obj.gpibObj.timeout = obj.timeout;
                 obj.gpibObj.InputBufferSize = obj.bufferSize;
                 obj.gpibObj.ByteOrder = 'littleEndian';
                 try

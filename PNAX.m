@@ -96,7 +96,20 @@ classdef PNAX < GPIBObj
             %Change channel two frequency range
             
             temp(tempArrayCounter) = convertCharsToStrings('CALC2:CUST:DEF "sysnpd", "Noise Figure Cold Source", "SYSNPD"');
-            tempArrayCounter = tempArrayCounter + 1;      
+            tempArrayCounter = tempArrayCounter + 1;    
+            %Attach measurement to window
+            
+            temp(tempArrayCounter)  = "DISP:WIND2:STATE ON";
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = convertCharsToStrings('DISPlay:WINDow2:TRACe1:FEED "sysnpd"');
+            tempArrayCounter = tempArrayCounter + 1;
+            % Annotate window measurements
+            temp(tempArrayCounter)  = "DISPlay:WINDow2:TITLe:STATe ON";
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = "DISPlay:WINDow2:TRACe1:STATe ON";
+            tempArrayCounter = tempArrayCounter + 1;
+
+            % Setup stop/start freq
             temp(tempArrayCounter)  = sprintf("SENS2:FREQ:STAR %f", obj.fStart); 
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter)  = sprintf("SENS2:FREQ:STOP %f", obj.fStop); 
@@ -108,6 +121,9 @@ classdef PNAX < GPIBObj
             tempArrayCounter = tempArrayCounter + 1;
 
             temp(tempArrayCounter) = sprintf("SENS2:NOIS:AVER %d", obj.nAvg);
+            tempArrayCounter = tempArrayCounter + 1;
+            
+            temp(tempArrayCounter) = "SENS2:NOIS:AVER:STAT 1";
             tempArrayCounter = tempArrayCounter + 1;
             
             % Set up s parameter settings
@@ -178,14 +194,24 @@ classdef PNAX < GPIBObj
         
         function saveNoisePower(obj, noiseFilename)
             obj.sendCommand("SENS2:AVER:CLE", 1);
-            for avgCount = 1:obj.nAvg
-                status = obj.sendQuery('INIT:IMM;*OPC?'); 
-                status = obj.sendQuery('DISP:WIND2:Y:AUTO;*OPC?');
-                pause(1);
+            
+            % Autoscale display
+            obj.sendCommand("DISP:WIND2:Y:AUTO", 1);
+            obj.sendCommand("CALC2:PAR:SEL 'sysnpd'", 1);
+            % Start the measurement and wait until it is complete
+            obj.sendCommand("INIT2:IMM", 1);
+            % Wait until operation is complete
+            opcStatus = 0;
+            while(~opcStatus)
+                pause(5);
+                disp("Still waiting");
+                opcStatus = str2double(obj.sendQuery("*OPC?"));
+                disp("Still waiting");
             end
-            temp = obj.sendQuery('DISP:WIND2:TRAC2:SEL;*OPC?');
-            temp = obj.sendQuery('MMEM:STOR:DATA "%s","CSV Formatted Data","Channel","Displayed",5;*OPC?', noiseFilename); 
-            obj.storedCSVFiles{end+1} = noiseFilename;
+            
+            [data, ~] = obj.saveData("Noise");
+            data = array2table(data, 'VariableNames', {'Freq', 'SYSNPD'});
+            writetable(data, noiseFilename);
         end
         
         function [data, numPoints] = saveData(obj, type)
@@ -207,10 +233,12 @@ classdef PNAX < GPIBObj
                     data = reshape(data, numPoints, 9);
                 case "Noise"
                     % Request measurement data
-                    obj.sendCommand(convertCharsToStrings('CALC2:DATA:CUST? "sysnpd"'), 1);
+                    obj.sendCommand("CALC2:DATA? FDATA", 1);
                     data = binblockread(obj.gpibObj, 'double');
+                    obj.sendCommand("CALC2:X?", 1);
+                    freqArray = binblockread(obj.gpibObj, 'double');
                     numPoints = str2double(obj.sendQuery("SENS2:SWE:POIN?"));
-                    data = reshape(data, numPoints, 2);
+                    data = [freqArray, data];
                 otherwise
                     warning("Invalid measurement requested");
             
