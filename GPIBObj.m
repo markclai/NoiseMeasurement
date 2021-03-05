@@ -7,7 +7,7 @@ classdef GPIBObj
         gpibObj
         gpibBoard
         interface = 'agilent'
-        timeout = 1000;
+        timeout = 20;
         bufferSize = 10e6;
     end
     
@@ -25,7 +25,8 @@ classdef GPIBObj
                     fopen(obj.gpibObj);
                     fprintf("Connected to %s\n",(query(obj.gpibObj, "*IDN?")));
                     fclose(obj.gpibObj);
-                catch
+                catch ME
+                    fprintf("Error message: %s\n", ME.message);
                     fclose(obj.gpibObj);
                     error("Couldn't initialize GPIB connection at GPIB Address %d\n", obj.gpibAddr);
                 end
@@ -39,7 +40,8 @@ classdef GPIBObj
                     fopen(obj.gpibObj);
                     clrdevice(obj.gpibObj);
                     fprintf("Connected to %s\n", query(obj.gpibObj, '*IDN?'));
-                catch
+                catch ME
+                    fprintf("Error message: %s\n", ME.message);
                     error("Couldn't initialize VISA connection to %s\n", obj.gpibAddr);
                 end
             end
@@ -50,7 +52,8 @@ classdef GPIBObj
             if strcmp(obj.gpibObj.status, 'closed')
                 try
                     fopen(obj.gpibObj);
-                catch
+                catch ME
+                    fprintf("Error message: %s\n", ME.message);
                     fclose(obj.gpibObj);
                     error("Couldn't connect to GPIB address %d", obj.gpibAddr);   
                 end
@@ -63,7 +66,8 @@ classdef GPIBObj
                 try
                     fclose(obj.gpibObj);
                     status = false;
-                catch
+                catch ME
+                    fprintf("Error message: %s\n", ME.message);
                     fclose(obj.gpibObj);
                     error("Unable to close GPIB connection at GPIB Address %d\n", obj.gpibAddr);
                 end
@@ -74,13 +78,14 @@ classdef GPIBObj
             %   Detailed explanation goes here
             obj.checkStatusAndConnect();
             for comCounter=1:size
-                %try
+                try
                     fprintf(obj.gpibObj,comArray(comCounter));
                     disp(comArray(comCounter));
-%                 catch
-%                     fclose(obj.gpibObj);
-%                     error("Failed sending command %s\n", comArray{comCounter}); 
-%                 end
+                catch ME
+                    fprintf("Error message: %s\n", ME.message);
+                    fclose(obj.gpibObj);
+                    error("Failed sending command %s\n", comArray{comCounter}); 
+                end
             end
             
             %obj.checkStatusAndDisconnect();

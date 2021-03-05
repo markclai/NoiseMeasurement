@@ -148,6 +148,8 @@ classdef PNAX < GPIBObj
                     warning("Invalid noise gain requested");
             end
             obj.sendCommand(temp, length(temp));
+            % Wait for commands to process
+            obj.sendQuery("*OPC?");
         end
             
         function saveS2P(obj, s2pFilename)    
@@ -157,13 +159,23 @@ classdef PNAX < GPIBObj
             
             % Autoscale display
             obj.sendCommand("DISP:WIND1:Y:AUTO", 1);
+            
+            obj.sendQuery("*OPC?");
+            
+            % Clear status register
+            obj.sendCommand("*CLS", 1);
+                       
             % Start the measurement and wait until it is complete
             obj.sendCommand(":SENS1:SWE:MODE SINGLE", 1);
+            obj.sendCommand("*OPC", 1);
             
             % Wait until operation is complete
-            opcStatus = 0;
-            while(~opcStatus)
-                opcStatus = str2double(obj.sendQuery("*OPC?"));
+            esrBit = str2num(obj.sendQuery("*ESR?"));
+            while(~bitand(esrBit, 1))
+                esrBit = str2num(obj.sendQuery("*ESR?"));
+                pause(5);
+                disp("Still waiting")
+                disp(esrBit);
             end
             
             [data, numPoints] = obj.saveData("SNP");
@@ -198,15 +210,18 @@ classdef PNAX < GPIBObj
             % Autoscale display
             obj.sendCommand("DISP:WIND2:Y:AUTO", 1);
             obj.sendCommand("CALC2:PAR:SEL 'sysnpd'", 1);
+            % Clear status register
+            obj.sendCommand("*CLS", 1);
             % Start the measurement and wait until it is complete
             obj.sendCommand("INIT2:IMM", 1);
             % Wait until operation is complete
-            opcStatus = 0;
-            while(~opcStatus)
+            obj.sendCommand("*OPC", 1); % Sets the status register to 1 once complete
+            esrBit = str2num(obj.sendQuery("*ESR?"));
+            while(~(bitand(esrBit, 1)))
                 pause(5);
                 disp("Still waiting");
-                opcStatus = str2double(obj.sendQuery("*OPC?"));
-                disp("Still waiting");
+                esrBit = str2num(obj.sendQuery("*ESR?"));
+                disp(esrBit);
             end
             
             [data, ~] = obj.saveData("Noise");
