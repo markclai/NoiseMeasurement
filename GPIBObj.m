@@ -1,4 +1,4 @@
-classdef GPIBObj
+classdef GPIBObj < handle
     %GPIBOBJ Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -7,7 +7,7 @@ classdef GPIBObj
         gpibObj
         gpibBoard
         interface = 'agilent'
-        timeout = 20;
+        timeout = 1000;
         bufferSize = 10e6;
     end
     
