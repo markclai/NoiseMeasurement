@@ -26,22 +26,21 @@ classdef PNAX < GPIBObj
             disp("Setting up PNA-X");
             % Set format of S2P file
             tempArrayCounter = 1;
+            % Delete existing channel traces
+            temp(tempArrayCounter)  = sprintf("CALC:PAR:DEL:ALL"); 
+            tempArrayCounter = tempArrayCounter + 1;
+            
             temp(tempArrayCounter) = "MMEM:STOR:TRAC:FORM:SNP MA"; 
             tempArrayCounter = tempArrayCounter + 1;
 
-            %Load Calibration file
-            temp(tempArrayCounter) = convertCharsToStrings(sprintf('MMEM:LOAD:CSAR "%s"', calFile));
-            tempArrayCounter = tempArrayCounter + 1;
+
             %Set trigger to manual
             temp(tempArrayCounter) = sprintf("TRIG:SOUR MAN");
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter)  = sprintf("TRIG:SCOP ALL"); 
             tempArrayCounter = tempArrayCounter + 1;
             
-            % Delete existing channel traces
-            temp(tempArrayCounter)  = sprintf("CALC:PAR:DEL:ALL"); 
-            tempArrayCounter = tempArrayCounter + 1;
-            
+
             
             %Setup channel 1 for S parameters
             temp(tempArrayCounter)  = convertCharsToStrings('CALC1:PAR:DEF:EXT "SParamMeasS11", S11');
@@ -91,6 +90,10 @@ classdef PNAX < GPIBObj
             temp(tempArrayCounter)  = sprintf("SENS1:AVER:MODE SWEEP");
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter)  = sprintf("SENS1:AVER:STAT 1"); 
+            tempArrayCounter = tempArrayCounter + 1;
+            
+            % Load Calibration file
+            temp(tempArrayCounter) = "SENS1:CORR:CSET:ACT 'ML_TEST',1";
             tempArrayCounter = tempArrayCounter + 1;
 
             %Change channel two frequency range
