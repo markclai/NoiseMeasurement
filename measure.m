@@ -1,23 +1,51 @@
+pnaxAddress = 0;
+dmmAddress = 0;
+dcSupplyAddress = 0;
+impGenComPort = 0;
+gpibBoard = 0;
+freqStart = 100e6;
+freqStop = 2e9;
+nPoints = 50;
+nAvg = 10;
+noiseBW = 800e3;
+noiseGain = "MED";
+pnaxCalSetName = "ML_Cal_Mar3";
+pnaxPortPower = -55;
+dmmIntTime = 100;
+dcVoltage = 56;
+dcCurrent = 100e-3;
+dutPowerChannel = 1;
+rfSwitch.channel1 = 2;
+rfSwitch.channel2 = 3;
+rfSwitch.voltage1 = 12;
+rfSwitch.voltage2 = 12;
 %% Connect to Lab instruments
-pnax = PNAX('', 0);
-tuner = ImpGen(2);
-dmm = DMM('', 0);
-pnaxCalFile = "";
-sw.handle = actxcontrol('USBTUNERX.USBTUNERXCtrl.1');
-sw.handle.PulseBit(sw.in_vna);
+pnax = PNAX(pnaxAddress);
+dmm = DMM(dmmAddress, gpibBoard);
+dcSupply = DCPower(dcSupplyAddress, gpibBoard);
+tuner = ImpGen(impGenComPort);
 
-pnax.setup(100e6, 2e9, 50, 50, pnaxCalFile);
+%% Setup Lab Instruments
+pnax.setup(freqStart, freqStop, nPoints, nAvg, pnaxCalSetName, noiseGain, pnaxPortPower);
+dmm.setupTempKelvin(dmmIntTime);
+dcSupply.setVoltage(dutPowerChannel, dcVoltage);
+dcSupply.setCurrent(dutPowerChannel, dcCurrent);
+dcSupply.enableOutput(dutPowerChannel);
+switchID = dcSupply.addSwitchSetup(rfSwitch.channel1, rfSwitch.channel2, rfSwitch.voltage1, rfSwitch.voltage2);
 %% Run measurement
 
 for tunerState = 1:4
+    dcSupply.setSwitchState(switchID, 1);
     tuner.setState(tunerState);
+    
+    pnax.saveS2P(sprintf("S2PState%d.csv", tunerState));
+    dcSupply.setSwitchState(switchID, 2);
+    pnax.saveNoisePower(sprintf("NoisePower%d.csv", tunerState));
     tempKelvin(tunerState) = dmm.readTempKelvin();
-    pnax.saveS2P(sprintf("S2PState%d.csv", tunerState);
-    sw.handle.PulseBit(sw.in_vna);
-    pnax.saveNoisePower(sprintf("NoisePower%d.csv", tunerState);
-    sw.handle.PulseBit(sw.in_vna);
 end
 
+% Write tempertaure to csv file
+writematrix(tempKelvin, "RoomTempKelvin");
 
 
 
