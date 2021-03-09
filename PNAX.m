@@ -4,8 +4,6 @@ classdef PNAX < GPIBObj
         fStop
         nPoints
         nAvg
-        storedS2PFiles
-        storedCSVFiles
         noiseGain
     end
     
@@ -18,7 +16,7 @@ classdef PNAX < GPIBObj
             obj.sendCommand("SYST:FPR", 1);
         end
         
-        function setup(obj, fstart, fstop, numpoints, numavg, calFile, noiseGain)
+        function setup(obj, fstart, fstop, numpoints, numavg, calSet, noiseGain, portPower)
             obj.fStart = fstart;
             obj.fStop = fstop;
             obj.nPoints = numpoints;
@@ -93,7 +91,11 @@ classdef PNAX < GPIBObj
             tempArrayCounter = tempArrayCounter + 1;
             
             % Load Calibration file
-            temp(tempArrayCounter) = "SENS1:CORR:CSET:ACT 'ML_TEST',1";
+            temp(tempArrayCounter) = sprintf("SENS1:CORR:CSET:ACT '%s',1", calSet);
+            tempArrayCounter = tempArrayCounter + 1;
+            
+            % Set channel 1 stimulus to desired power
+            temp(tempArrayCounter) = sprintf("SOUR1:POW:CENT %d", portPower);
             tempArrayCounter = tempArrayCounter + 1;
 
             %Change channel two frequency range
