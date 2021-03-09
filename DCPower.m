@@ -57,7 +57,7 @@ classdef DCPower < GPIBObj & handle
         end
         
             
-        function switchSetState(obj, switchID, state)
+        function setSwitchState(obj, switchID, state)
             if(switchID > length(obj.switches) || obj.switches(switchID).state == -1)
                 warning("Invalid switch requested");
                 return;
