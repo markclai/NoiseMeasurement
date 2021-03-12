@@ -44,7 +44,7 @@ classdef DCPower < GPIBObj & handle
             obj.enableOutput(chan2);
             %Set voltage so switch is set to state 1
             obj.switches(switchID).state = 1;
-            obj.switchSetState(switchID, 1);
+            obj.setSwitchState(switchID, 1);
             
         end
         
