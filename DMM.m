@@ -17,9 +17,7 @@ classdef DMM < GPIBObj
             obj.sendCommand(resetArray, length(resetArray));
         end
         
-        function setupVoltage(obg)
-            
-        
+      
         function setupTempKelvin(obj, avgPowerCycle)
             obj.avgPowerCycle = avgPowerCycle;
             setupSequence(1) = "CONF:TEMP THER,5000";
