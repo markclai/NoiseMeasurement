@@ -81,7 +81,7 @@ classdef PNAX < GPIBObj
             % Set up s parameter settings
             temp(tempArrayCounter)  = sprintf("SENS1:AVER:COUN %d", obj.nAvg);
             tempArrayCounter = tempArrayCounter + 1;
-            temp(tempArrayCounter)  = sprintf("SENS1:AVER:MODE SWEEP");
+            temp(tempArrayCounter)  = sprintf("SENS1:AVER:MODE POIN");
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter)  = sprintf("SENS1:AVER:STAT 1"); 
             tempArrayCounter = tempArrayCounter + 1;
@@ -136,7 +136,7 @@ classdef PNAX < GPIBObj
             % Set up s parameter settings
             temp(tempArrayCounter) = sprintf("SENS2:AVER:COUN %d", obj.nAvg); 
             tempArrayCounter = tempArrayCounter + 1;
-            temp(tempArrayCounter) = sprintf("SENS2:AVER:MODE SWEEP"); 
+            temp(tempArrayCounter) = sprintf("SENS2:AVER:MODE POIN"); 
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter) = sprintf("SENS2:AVER:STAT 1"); 
             tempArrayCounter = tempArrayCounter + 1;
