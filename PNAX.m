@@ -28,18 +28,11 @@ classdef PNAX < GPIBObj
             temp(tempArrayCounter)  = sprintf("CALC:PAR:DEL:ALL"); 
             tempArrayCounter = tempArrayCounter + 1;
             
-            temp(tempArrayCounter) = "MMEM:STOR:TRAC:FORM:SNP MA"; 
-            tempArrayCounter = tempArrayCounter + 1;
+%             temp(tempArrayCounter) = "MMEM:STOR:TRAC:FORM:SNP MA"; 
+%             tempArrayCounter = tempArrayCounter + 1;
 
-
-            %Set trigger to manual
-            temp(tempArrayCounter) = sprintf("TRIG:SOUR MAN");
-            tempArrayCounter = tempArrayCounter + 1;
-            temp(tempArrayCounter)  = sprintf("TRIG:SCOP ALL"); 
-            tempArrayCounter = tempArrayCounter + 1;
-            
-
-            
+          
+                      
             %Setup channel 1 for S parameters
             temp(tempArrayCounter)  = convertCharsToStrings('CALC1:PAR:DEF:EXT "SParamMeasS11", S11');
             tempArrayCounter = tempArrayCounter + 1;
@@ -74,13 +67,16 @@ classdef PNAX < GPIBObj
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter)  = "DISPlay:WINDow1:TRACe4:STATe ON";
             tempArrayCounter = tempArrayCounter + 1;
-
+            
             %Change channel one frequency range
             temp(tempArrayCounter)  = sprintf("SENS1:FREQ:STAR %f", obj.fStart); 
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter)  = sprintf("SENS1:FREQ:STOP %f", obj.fStop);
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter)  = sprintf("SENS1:SWE:POIN %d", obj.nPoints); 
+            tempArrayCounter = tempArrayCounter + 1;
+            % Load Calibration file
+            temp(tempArrayCounter) = sprintf("SENS1:CORR:CSET:ACT '%s',1", calSet);
             tempArrayCounter = tempArrayCounter + 1;
             % Set up s parameter settings
             temp(tempArrayCounter)  = sprintf("SENS1:AVER:COUN %d", obj.nAvg);
@@ -89,13 +85,13 @@ classdef PNAX < GPIBObj
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter)  = sprintf("SENS1:AVER:STAT 1"); 
             tempArrayCounter = tempArrayCounter + 1;
-            
-            % Load Calibration file
-            temp(tempArrayCounter) = sprintf("SENS1:CORR:CSET:ACT '%s',1", calSet);
+                    
+            % Set channel 1 stimulus to desired power
+            temp(tempArrayCounter) = sprintf("SOUR:POW1 %d", portPower);
             tempArrayCounter = tempArrayCounter + 1;
             
-            % Set channel 1 stimulus to desired power
-            temp(tempArrayCounter) = sprintf("SOUR1:POW:CENT %d", portPower);
+            % Set sweep mode to HOLD for channel 1
+            temp(tempArrayCounter) = "SENS1:Sweep:Mode HOLD";
             tempArrayCounter = tempArrayCounter + 1;
 
             %Change channel two frequency range
@@ -131,6 +127,12 @@ classdef PNAX < GPIBObj
             temp(tempArrayCounter) = "SENS2:NOIS:AVER:STAT 1";
             tempArrayCounter = tempArrayCounter + 1;
             
+            %Set trigger to manual
+            temp(tempArrayCounter) = sprintf("TRIG:SOUR MAN");
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = sprintf("TRIG:SCOP CURR"); 
+            tempArrayCounter = tempArrayCounter + 1;
+            
             % Set up s parameter settings
             temp(tempArrayCounter) = sprintf("SENS2:AVER:COUN %d", obj.nAvg); 
             tempArrayCounter = tempArrayCounter + 1;
@@ -152,6 +154,9 @@ classdef PNAX < GPIBObj
                 otherwise 
                     warning("Invalid noise gain requested");
             end
+            % Set sweep mode to HOLD for channel 1
+            temp(tempArrayCounter) = "SENS2:Sweep:Mode HOLD";
+            tempArrayCounter = tempArrayCounter + 1;
             obj.sendCommand(temp, length(temp));
             % Wait for commands to process
             obj.sendQuery("*OPC?");
@@ -162,20 +167,20 @@ classdef PNAX < GPIBObj
             
             obj.sendCommand("SENS1:AVER:CLE", 1);
             
-            % Autoscale display
-            obj.sendCommand("DISP:WIND1:Y:AUTO", 1);
             
             obj.sendQuery("*OPC?");
             
             % Clear status register
             obj.sendCommand("*CLS", 1);
+            
+            obj.sendQuery("*OPC?");
                        
             % Start the measurement and wait until it is complete
-            obj.sendCommand(":SENS1:SWE:MODE SINGLE", 1);
+            obj.sendCommand("INIT1:IMM", 1);
             obj.sendCommand("*OPC", 1);
             
             % Wait until operation is complete
-            esrBit = str2num(obj.sendQuery("*ESR?"));
+            esrBit = 0;
             while(~bitand(esrBit, 1))
                 esrBit = str2num(obj.sendQuery("*ESR?"));
                 pause(5);
@@ -183,11 +188,15 @@ classdef PNAX < GPIBObj
                 disp(esrBit);
             end
             
+            obj.sendQuery("*OPC?");
+            % Autoscale display
+            obj.sendCommand("DISP:WIND1:Y:AUTO", 1);
+            
             [data, numPoints] = obj.saveData("SNP");
             freqRange = data(:,1);
             
             % Convert retrieved magnitude info from dB
-            sparamMag = 10.^((1/20).*data(:,2:2:8));
+            sparamMag = data(:,2:2:8);
 
             % Convert retrieved phase info from degrees to radians
             sparamPhase = data(:,3:2:9)*(pi/180);
@@ -212,8 +221,6 @@ classdef PNAX < GPIBObj
         function saveNoisePower(obj, noiseFilename)
             obj.sendCommand("SENS2:AVER:CLE", 1);
             
-            % Autoscale display
-            obj.sendCommand("DISP:WIND2:Y:AUTO", 1);
             obj.sendCommand("CALC2:PAR:SEL 'sysnpd'", 1);
             % Clear status register
             obj.sendCommand("*CLS", 1);
@@ -221,13 +228,16 @@ classdef PNAX < GPIBObj
             obj.sendCommand("INIT2:IMM", 1);
             % Wait until operation is complete
             obj.sendCommand("*OPC", 1); % Sets the status register to 1 once complete
-            esrBit = str2num(obj.sendQuery("*ESR?"));
+            esrBit = 0;
             while(~(bitand(esrBit, 1)))
                 pause(5);
                 disp("Still waiting");
                 esrBit = str2num(obj.sendQuery("*ESR?"));
                 disp(esrBit);
             end
+            
+            % Autoscale display
+            obj.sendCommand("DISP:WIND2:Y:AUTO", 1);
             
             [data, ~] = obj.saveData("Noise");
             data = array2table(data, 'VariableNames', {'Freq', 'SYSNPD'});
