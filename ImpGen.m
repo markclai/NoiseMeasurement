@@ -15,16 +15,12 @@ classdef ImpGen
         end
         
         function openSerial(obj)
-            r = instrfind();
-            if isempty(r)
-                return
-            else
-                fclose(r);
-            end
-            try
-                fopen(obj.serialObject);
-            catch
-                error("Couldn't connect to impedance generator\n");
+            if(strcmp(obj.serialObject.Status, "closed"))      
+                try
+                    fopen(obj.serialObject);
+                catch
+                    error("Couldn't connect to impedance generator\n");
+                end
             end
         end
         
