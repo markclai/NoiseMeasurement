@@ -23,7 +23,7 @@ clear all;
 % tuner.setState(5);
 
 %% Test DC Supply
-% dcSupply = DCPower(1,7);
+ dcSupply = DCPower(1,7);
 %  dcSupply.setVoltage(1, 6);
 %  dcSupply.setCurrent(1, 0.1);
 %  dcSupply.enableOutput(1);
@@ -31,16 +31,20 @@ clear all;
 % dcSupply.disableOutput(1);
 % dcSupply.checkStatusAndDisconnect();
 %% Test switch code
-% switchID(1) = dcSupply.addSwitchSetup(2, 3, 12, 12);
-% pause(5);
-% dcSupply.setSwitchState(switchID(1), 1);
-% pause(5);
-% dcSupply.setSwitchState(switchID(1), 2);
-% dcSupply.checkStatusAndDisconnect();
+switchID(1) = dcSupply.addSwitchSetup(2, 3, 12, 12);
+pause(5);
+dcSupply.setSwitchState(switchID(1), 2);
+pause(5);
+dcSupply.setSwitchState(switchID(1), 1);
+dcSupply.checkStatusAndDisconnect();
+
+%% Test Tuner
+impGen = ImpGen(5);
+impGen.setState(1);
 
 %% Test PNA-X
 pnax = PNAX("USB0::0x0957::0x0118::MY48420967::0::INSTR");
-pnax.setup(100e6,2e9,201,1, "ML_CAL_MAR3", "HIGH", -45);
+pnax.setup(100e6,2e9,201,128, "ML_CAL_MAR_13", "HIGH", -55);
 pnax.saveS2P("test1.s2p");
 %pnax.saveNoisePower("test1.csv");
 pnax.checkErrors();

@@ -117,15 +117,21 @@ classdef PNAX < GPIBObj
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter)  = sprintf("SENS2:SWE:POIN %d", obj.nPoints); 
             tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = sprintf("SENS2:AVER:COUN %d", obj.nAvg); 
+            tempArrayCounter = tempArrayCounter + 1;
+            temp(tempArrayCounter)  = "SENS2:AVER ON"; 
+            tempArrayCounter = tempArrayCounter + 1;
 
             temp(tempArrayCounter) = sprintf("SENS2:NOIS:BWID 800e3"); 
+            tempArrayCounter = tempArrayCounter + 1;
+            
+            temp(tempArrayCounter) = "SENS2:NOIS:AVER:STAT 1";
             tempArrayCounter = tempArrayCounter + 1;
 
             temp(tempArrayCounter) = sprintf("SENS2:NOIS:AVER %d", obj.nAvg);
             tempArrayCounter = tempArrayCounter + 1;
             
-            temp(tempArrayCounter) = "SENS2:NOIS:AVER:STAT 1";
-            tempArrayCounter = tempArrayCounter + 1;
+          
             
             %Set trigger to manual
             temp(tempArrayCounter) = sprintf("TRIG:SOUR MAN");
@@ -265,8 +271,10 @@ classdef PNAX < GPIBObj
                     % Request measurement data
                     obj.sendCommand("CALC2:DATA? FDATA", 1);
                     data = binblockread(obj.gpibObj, 'double');
+                    fread(obj.gpibObj, 1);
                     obj.sendCommand("CALC2:X?", 1);
                     freqArray = binblockread(obj.gpibObj, 'double');
+                    fread(obj.gpibObj, 1);
                     numPoints = str2double(obj.sendQuery("SENS2:SWE:POIN?"));
                     data = [freqArray, data];
                 otherwise

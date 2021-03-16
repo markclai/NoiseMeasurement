@@ -1,3 +1,4 @@
+clear all;
 pnaxAddress = "USB0::0x0957::0x0118::MY48420967::0::INSTR";
 dmmAddress = 22;
 dcSupplyAddress = 1;
@@ -6,10 +7,11 @@ gpibBoard = 7;
 freqStart = 100e6;
 freqStop = 2e9;
 nPoints = 50;
-nAvg = 1;
+nAvg = 128;
+
 noiseBW = 800e3;
 noiseGain = "HIGH";
-pnaxCalSetName = "ML_Cal_Mar3";
+pnaxCalSetName = "ML_Cal_MAR_13";
 pnaxPortPower = -55;
 dmmIntTime = 100;
 dcVoltage = 6;
@@ -54,6 +56,8 @@ end
 for chanCounter = 1:4
     dcSupply.disableOutput(chanCounter);
 end
+%% Readout error messages from pnax
+pnax.checkErrors();
 %% Disconnect all lab instruments
 pnax.checkStatusAndDisconnect();
 dmm.checkStatusAndDisconnect();
