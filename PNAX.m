@@ -68,6 +68,10 @@ classdef PNAX < GPIBObj
             temp(tempArrayCounter)  = "DISPlay:WINDow1:TRACe4:STATe ON";
             tempArrayCounter = tempArrayCounter + 1;
             
+            % Load Calibration file
+            temp(tempArrayCounter) = sprintf("SENS1:CORR:CSET:ACT '%s',1", calSet);
+            tempArrayCounter = tempArrayCounter + 1;
+            
             %Change channel one frequency range
             temp(tempArrayCounter)  = sprintf("SENS1:FREQ:STAR %f", obj.fStart); 
             tempArrayCounter = tempArrayCounter + 1;
@@ -75,13 +79,11 @@ classdef PNAX < GPIBObj
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter)  = sprintf("SENS1:SWE:POIN %d", obj.nPoints); 
             tempArrayCounter = tempArrayCounter + 1;
-            % Load Calibration file
-            temp(tempArrayCounter) = sprintf("SENS1:CORR:CSET:ACT '%s',1", calSet);
-            tempArrayCounter = tempArrayCounter + 1;
+            
             % Set up s parameter settings
             temp(tempArrayCounter)  = sprintf("SENS1:AVER:COUN %d", obj.nAvg);
             tempArrayCounter = tempArrayCounter + 1;
-            temp(tempArrayCounter)  = sprintf("SENS1:AVER:MODE POIN");
+            temp(tempArrayCounter)  = sprintf("SENS1:AVER:MODE SWEEP");
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter)  = sprintf("SENS1:AVER:STAT 1"); 
             tempArrayCounter = tempArrayCounter + 1;
@@ -142,7 +144,7 @@ classdef PNAX < GPIBObj
             % Set up s parameter settings
             temp(tempArrayCounter) = sprintf("SENS2:AVER:COUN %d", obj.nAvg); 
             tempArrayCounter = tempArrayCounter + 1;
-            temp(tempArrayCounter) = sprintf("SENS2:AVER:MODE POIN"); 
+            temp(tempArrayCounter) = sprintf("SENS2:AVER:MODE SWEEP"); 
             tempArrayCounter = tempArrayCounter + 1;
             temp(tempArrayCounter) = sprintf("SENS2:AVER:STAT 1"); 
             tempArrayCounter = tempArrayCounter + 1;
@@ -176,25 +178,33 @@ classdef PNAX < GPIBObj
             
             obj.sendQuery("*OPC?");
             
-            % Clear status register
-            obj.sendCommand("*CLS", 1);
+            progressbar = waitbar(0, "Starting sweep", 'Name', 'Measuring S2P');
             
-            obj.sendQuery("*OPC?");
-                       
-            % Start the measurement and wait until it is complete
-            obj.sendCommand("INIT1:IMM", 1);
-            obj.sendCommand("*OPC", 1);
-            
-            % Wait until operation is complete
-            esrBit = 0;
-            while(~bitand(esrBit, 1))
-                esrBit = str2num(obj.sendQuery("*ESR?"));
-                pause(5);
-                disp("Still waiting")
-                disp(esrBit);
+            for avgCounter = 1:obj.nAvg          
+                % Clear status register
+                obj.sendCommand("*CLS", 1);
+
+                obj.sendQuery("*OPC?");
+
+                % Start the measurement and wait until it is complete
+                obj.sendCommand("INIT1:IMM", 1);
+                obj.sendCommand("*OPC", 1);
+
+                % Wait until operation is complete
+                esrBit = 0;
+                while(~bitand(esrBit, 1))
+                    esrBit = str2num(obj.sendQuery("*ESR?"));
+                    pause(2);
+                    disp("Still waiting")
+                    disp(esrBit);
+                end
+
+                obj.sendQuery("*OPC?");
+                
+                waitbar(avgCounter / obj.nAvg, progressbar, sprintf("Completed Sweep %d of %d", avgCounter, obj.nAvg)); 
             end
             
-            obj.sendQuery("*OPC?");
+            close(progressbar);
             % Autoscale display
             obj.sendCommand("DISP:WIND1:Y:AUTO", 1);
             
@@ -228,19 +238,25 @@ classdef PNAX < GPIBObj
             obj.sendCommand("SENS2:AVER:CLE", 1);
             
             obj.sendCommand("CALC2:PAR:SEL 'sysnpd'", 1);
-            % Clear status register
-            obj.sendCommand("*CLS", 1);
-            % Start the measurement and wait until it is complete
-            obj.sendCommand("INIT2:IMM", 1);
-            % Wait until operation is complete
-            obj.sendCommand("*OPC", 1); % Sets the status register to 1 once complete
-            esrBit = 0;
-            while(~(bitand(esrBit, 1)))
-                pause(5);
-                disp("Still waiting");
-                esrBit = str2num(obj.sendQuery("*ESR?"));
-                disp(esrBit);
+            progressbar = waitbar(0, "Starting sweep", 'Name', 'Measuring Noise');
+            for sweepCounter = 1:obj.nAvg 
+                % Clear status register
+                obj.sendCommand("*CLS", 1);
+                % Start the measurement and wait until it is complete
+                obj.sendCommand("INIT2:IMM", 1);
+                % Wait until operation is complete
+                obj.sendCommand("*OPC", 1); % Sets the status register to 1 once complete
+                esrBit = 0;
+                while(~(bitand(esrBit, 1)))
+                    pause(5);
+                    disp("Still waiting");
+                    esrBit = str2num(obj.sendQuery("*ESR?"));
+                    disp(esrBit);
+                end
+                waitbar(avgCounter / obj.nAvg, progressbar, sprintf("Completed Sweep %d of %d", sweepCounter, obj.nAvg)); 
             end
+            
+            close(progressbar);
             
             % Autoscale display
             obj.sendCommand("DISP:WIND2:Y:AUTO", 1);
