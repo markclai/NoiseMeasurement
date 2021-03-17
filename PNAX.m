@@ -253,7 +253,7 @@ classdef PNAX < GPIBObj
                     esrBit = str2num(obj.sendQuery("*ESR?"));
                     disp(esrBit);
                 end
-                waitbar(avgCounter / obj.nAvg, progressbar, sprintf("Completed Sweep %d of %d", sweepCounter, obj.nAvg)); 
+                waitbar(sweepCounter / obj.nAvg, progressbar, sprintf("Completed Sweep %d of %d", sweepCounter, obj.nAvg)); 
             end
             
             close(progressbar);
